@@ -522,10 +522,15 @@ function addCart(id){
   else state.cart.push({id,qty:1});
   renderCart();save();toast(`${p.name} agregado`);
 }
+// Los precios ya incluyen impuesto: se extrae para reportes sin cobrarlo dos veces.
 function saleParts(){
-  let sub=0,t8=0,t19=0;
-  state.cart.forEach(i=>{const p=products.find(x=>x.id===i.id);const line=p.price*i.qty;sub+=line;if(p.cls==='prepared')t8+=line*p.taxRate;else if(p.cls==='retail')t19+=line*p.taxRate;});
-  return{sub,t8,t19,total:sub+t8+t19};
+  let sub=0,t8=0,t19=0,total=0;
+  state.cart.forEach(i=>{const p=products.find(x=>x.id===i.id),line=p.price*i.qty;total+=line;
+    if(p.cls==='prepared'){const tax=line-(line/(1+p.taxRate));t8+=tax;sub+=line-tax;}
+    else if(p.cls==='retail'){const tax=line-(line/(1+p.taxRate));t19+=tax;sub+=line-tax;}
+    else sub+=line;
+  });
+  return{sub,t8,t19,total};
 }
 function renderCart(){
   const {sub,t8,t19,total}=saleParts();
@@ -718,7 +723,7 @@ function renderDashboard(){
   const income=state.cashMovements.filter(m=>m.type==='Ingreso').reduce((s,m)=>s+m.amount,0);
   document.getElementById('dashboardStats').innerHTML=[
     [money(today),'Ventas del día','↗','stat'],[state.sales.length,'N° de ventas','🧾','stat'],
-    [money(t8),'IVA preparados 8%','☕','stat tax8'],[money(t19),'IVA terminados 19%','📦','stat tax19'],
+    [money(t8),'Imp. consumo preparados (8%)','☕','stat tax8'],[money(t19),'IVA terminados (19%)','📦','stat tax19'],
     [money(state.cashOpening+income),'Caja actual','💵','stat'],[products.filter(p=>p.stock<=p.min).length,'Stock bajo','⚠','stat']
   ].map(x=>`<div class="card ${x[3]}"><div class="ico">${x[2]}</div><h3>${x[1]}</h3><b>${x[0]}</b></div>`).join('');
   const vals=[42,63,35,78,58,90,70],days=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
@@ -732,10 +737,10 @@ function renderReports(){
   const total=state.sales.reduce((s,x)=>s+x.total,0);
   const t8=state.sales.reduce((s,x)=>s+(x.tax8||0),0);
   const t19=state.sales.reduce((s,x)=>s+(x.tax19||0),0);
-  document.getElementById('reportCards').innerHTML=[[money(total),'Ventas acumuladas','📈'],[state.sales.length,'Ventas registradas','🧾'],[money(t8),'IVA 8% acumulado','☕'],[money(t19),'IVA 19% acumulado','📦']].map(x=>`<div class="card stat"><div class="ico">${x[2]}</div><h3>${x[1]}</h3><b>${x[0]}</b></div>`).join('');
+  document.getElementById('reportCards').innerHTML=[[money(total),'Ventas acumuladas','📈'],[state.sales.length,'Ventas registradas','🧾'],[money(t8),'Imp. consumo 8% acumulado','☕'],[money(t19),'IVA 19% acumulado','📦']].map(x=>`<div class="card stat"><div class="ico">${x[2]}</div><h3>${x[1]}</h3><b>${x[0]}</b></div>`).join('');
   const prepared=state.sales.reduce((s,x)=>s+(x.total-(x.tax8||0)-(x.tax19||0)),0);
   document.getElementById('reportBreakdown').innerHTML=`
-    <div class="movement"><div class="movico">☕</div><div style="flex:1"><b>Cafetería (preparados 8%)</b><div class="muted">IVA generado</div></div><b>${money(t8)}</b></div>
+    <div class="movement"><div class="movico">☕</div><div style="flex:1"><b>Cafetería (preparados 8%)</b><div class="muted">Impuesto al consumo incluido</div></div><b>${money(t8)}</b></div>
     <div class="movement"><div class="movico">📦</div><div style="flex:1"><b>Tienda (terminados 19%)</b><div class="muted">IVA generado</div></div><b>${money(t19)}</b></div>
     <div class="movement"><div class="movico">💰</div><div style="flex:1"><b>Base gravable (subtotales)</b><div class="muted">Sin impuestos</div></div><b>${money(prepared)}</b></div>
     <div class="movement"><div class="movico">🧾</div><div style="flex:1"><b>Total facturado</b><div class="muted">Con impuestos</div></div><b>${money(total)}</b></div>`;
