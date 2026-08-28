@@ -16,7 +16,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://ddvonqgouftgpxvmnveu.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_B-wd3blQek7o6YSjOv0p3w_F8V13Vzu';
 
-const configured = !SUPABASE_URL.includes('TU-PROJECT-REF') && !SUPABASE_ANON_KEY.includes('sb_publishable_B-wd3blQek7o6YSjOv0p3w_F8V13Vzu');
+// Comprueba que no se conserven los textos comodín por defecto
+const configured = !SUPABASE_URL.includes('TU-PROJECT-REF') && !SUPABASE_ANON_KEY.includes('TU-ANON-KEY');
 const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 async function fetchProfile(userId) {
